@@ -5,15 +5,6 @@ using UnityEngine;
 public class Professor : MonoBehaviour {
 
     int office = -1;
-	// Use this for initialization
-	void Start () {
-		
-	}
-	
-	// Update is called once per frame
-	void Update () {
-		
-	}
 
     public void assignOffice(int i)
     {
@@ -22,6 +13,11 @@ public class Professor : MonoBehaviour {
 
     public int getAdvice()
     {
-        return Random.Range(0, 5);
+        int x = Random.Range(0, 6);
+        while(x == office)
+        {
+            x = Random.Range(0, 6);
+        }
+        return x;
     }
 }
