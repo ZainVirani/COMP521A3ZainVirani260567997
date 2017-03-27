@@ -6,6 +6,7 @@ public class Student : MonoBehaviour {
 
     Vector3 target;
     int professor;
+    int plaque;
     int[] memory;
     Vector3[] locations;
 
@@ -22,7 +23,7 @@ public class Student : MonoBehaviour {
         locations = new Vector3[4];
         CAS = GameObject.FindGameObjectWithTag("floor").GetComponent<CoopAStar>();
         map = GameObject.FindGameObjectWithTag("floor").GetComponent<BuildMap>();
-
+        plaque = Random.Range(0, 6);
         assignProf(Random.Range(0, 6));
 
 	}
@@ -33,7 +34,6 @@ public class Student : MonoBehaviour {
         if (checkMemory())
         {
             //target set, head to target
-            Debug.Log("mem check positive");
         }
         else
         {
@@ -46,11 +46,17 @@ public class Student : MonoBehaviour {
 
     void choosePlaque()
     {
-        target = map.getPlaque(Random.Range(0,6));
+        int newP = plaque;
+        while(newP == plaque)
+        {
+            newP = Random.Range(0, 6);
+        }
+        plaque = newP;
+        target = map.getPlaque(plaque);
     }
 
 	void raycastOut () {
-        Debug.Log("ray out");
+        //Debug.Log("ray out");
         RaycastHit hit;
         Ray left = new Ray(transform.position, Vector3.left);
         Ray right = new Ray(transform.position, Vector3.right);
@@ -119,7 +125,7 @@ public class Student : MonoBehaviour {
     void idle()
     {
         //go to random spot
-        Debug.Log("IDLE");
+        //Debug.Log("IDLE");
         //on arrival
         //wait
         //head to new prof
@@ -128,19 +134,19 @@ public class Student : MonoBehaviour {
     
     bool checkMemory()
     {
-        for(int i = 0; i < 4; i++)
+        /*for(int i = 0; i < 4; i++)
         {
             if(memory[i] == professor)
             {
                 target = locations[i];
                 return true;
             }
-        }
+        }*/
         return false;
     }
 
     void headToTarget()
-    {
+    {   
         findPathTo(target);
     }
 
@@ -154,7 +160,6 @@ public class Student : MonoBehaviour {
             path.Add(currentNode);
             currentNode = currentNode.parent;
         }
-
         path.Reverse();
 
         float i = 3/21;
@@ -170,7 +175,7 @@ public class Student : MonoBehaviour {
             }
             j++;
             i = i + 3/21f;
-            Debug.Log("path step " + n.loc.x + " " + n.loc.y);
+            //Debug.Log("path step " + n.loc.x + " " + n.loc.y);
         }
     }
 
@@ -240,16 +245,6 @@ public class Student : MonoBehaviour {
 
             List<Node> neighbours = new List<Node>();
             //neighbours
-            /*
-            Node up = new Node(current.loc + new Vector3(0, 1), distance(currentLoc, current.loc + new Vector3(0, 1)), distance(current.loc + new Vector3(0, 1), targetLoc), current);
-            Node down = new Node(current.loc + new Vector3(0, -1), distance(currentLoc, current.loc + new Vector3(0, -1)), distance(current.loc + new Vector3(0, -1), targetLoc), current);
-            Node left = new Node(current.loc + new Vector3(1, 0), distance(currentLoc, current.loc + new Vector3(1, 0)), distance(current.loc + new Vector3(1, 0), targetLoc), current);
-            Node right = new Node(current.loc + new Vector3(-1, 0), distance(currentLoc, current.loc + new Vector3(-1, 0)), distance(current.loc + new Vector3(-1, 0), targetLoc), current);
-            Node NW = new Node(current.loc + new Vector3(-1, 1), distance(currentLoc, current.loc + new Vector3(-1, 1)), distance(current.loc + new Vector3(-1, 1), targetLoc), current);
-            Node NE = new Node(current.loc + new Vector3(1, 1), distance(currentLoc, current.loc + new Vector3(1, 1)), distance(current.loc + new Vector3(1, 1), targetLoc), current);
-            Node SW = new Node(current.loc + new Vector3(-1, -1), distance(currentLoc, current.loc + new Vector3(-1, -1)), distance(current.loc + new Vector3(-1, -1), targetLoc), current);
-            Node SE = new Node(current.loc + new Vector3(1, -1), distance(currentLoc, current.loc + new Vector3(1, -1)), distance(current.loc + new Vector3(1, -1), targetLoc), current);
-            */
             Node up = new Node(current.loc + new Vector3(0, 1), current);
             Node down = new Node(current.loc + new Vector3(0, -1), current);
             Node left = new Node(current.loc + new Vector3(1, 0), current);
