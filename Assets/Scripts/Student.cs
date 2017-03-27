@@ -4,14 +4,22 @@ using UnityEngine;
 
 public class Student : MonoBehaviour {
 
+    int studentNumber;
     Vector3 target;
     int professor;
     int plaque;
+    List<int> plaquesVisited;
     int[] memory;
     Vector3[] locations;
+    bool _idle = false;
 
     CoopAStar CAS;
     BuildMap map;
+
+    public void assignNumber(int x)
+    {
+        studentNumber = x;
+    }
 
 	// Use this for initialization
 	void Start () {
@@ -20,6 +28,7 @@ public class Student : MonoBehaviour {
         {
             memory[i] = -1;
         }
+        plaquesVisited = new List<int>();
         locations = new Vector3[4];
         CAS = GameObject.FindGameObjectWithTag("floor").GetComponent<CoopAStar>();
         map = GameObject.FindGameObjectWithTag("floor").GetComponent<BuildMap>();
@@ -27,13 +36,24 @@ public class Student : MonoBehaviour {
         assignProf(Random.Range(0, 6));
 
 	}
+
+    string memToString()
+    {
+        return "" + memory[0] + " " + memory[1] + " " + memory[2] + " " + memory[3] + ".";
+    }
+    
+    string targToString()
+    {
+        return target.ToString();
+    }
 	
     void assignProf(int prof)
     {
+        Debug.Log("I am student " + studentNumber + ". I am looking for professor " + prof + ". My memory is " + memToString() + ". My target is " + targToString());
         professor = prof;
         if (checkMemory())
         {
-            //target set, head to target
+            headToTarget();
         }
         else
         {
@@ -46,13 +66,39 @@ public class Student : MonoBehaviour {
 
     void choosePlaque()
     {
-        int newP = plaque;
-        while(newP == plaque)
+        if(plaquesVisited.Count == 0)
         {
-            newP = Random.Range(0, 6);
+            int newP = plaque;
+            while (newP == plaque)
+            {
+                newP = Random.Range(0, 6);
+            }
+            plaque = newP;
+            target = map.getPlaque(plaque);
+            plaquesVisited.Add(plaque);
         }
-        plaque = newP;
-        target = map.getPlaque(plaque);
+        else
+        {
+            int newP = plaque;
+            while (plaquesVisited.Contains(newP) || memoryScan(newP))
+            {
+                newP = Random.Range(0, 6);
+            }
+            plaque = newP;
+            target = map.getPlaque(plaque);
+            plaquesVisited.Add(plaque);
+        }
+        
+    }
+    
+    bool memoryScan(int x)
+    {
+        for(int i = 0; i < 4; i++)
+        {
+            if (memory[i] == x)
+                return true;
+        }
+        return false;
     }
 
 	void raycastOut () {
@@ -85,13 +131,11 @@ public class Student : MonoBehaviour {
         if(hit.collider.tag == "plaque")
         {
             int office = hit.collider.GetComponentInParent<Plaque>().getOffice();
-            
+            addToMemory(hit.collider.GetComponentInParent<Plaque>().getLoc(), office);
             if(office == professor)
             {
                 //path to professor
                 target = hit.collider.GetComponentInParent<Plaque>().getLoc();
-                //store in memory
-
                 //head to target
                 headToTarget();
             }
@@ -103,6 +147,7 @@ public class Student : MonoBehaviour {
         if(hit.collider.tag == "prof")
         {
             professor = hit.collider.GetComponentInParent<Professor>().getAdvice();
+            plaquesVisited.Clear();
             int x = Random.Range(0, 2);
             if(x == 1)
             {
@@ -117,31 +162,52 @@ public class Student : MonoBehaviour {
         }
     }
 
-    void addToMemory(Vector3 location, int profNum)
-    {
-
-    }
-
     void idle()
     {
-        //go to random spot
-        //Debug.Log("IDLE");
-        //on arrival
-        //wait
-        //head to new prof
-        assignProf(professor);
+        _idle = true;
+        int x = 0;
+        int y = 0;
+        while (CAS.isBlocked(x, y, 0) != 0)
+        {
+            x = Random.Range(4, 25);
+            y = Random.Range(4, 17);
+        }
+        target = new Vector3(x + 0.5f, y + 0.5f);
+        headToTarget();
     }
-    
+
+    void addToMemory(Vector3 location, int profNum)
+    {
+        if (memoryScan(profNum))
+            return;
+        for (int i = 0; i < 4; i++)
+        {
+            if (memory[i] == -1)
+            {
+                memory[i] = profNum;
+                locations[i] = location;
+                return;
+            }
+        }
+        for (int i = 0; i < 3; i++)
+        {
+            memory[i] = memory[i + 1];
+            locations[i] = locations[i + 1];
+        }
+        memory[3] = profNum;
+        locations[3] = location;
+    }
+
     bool checkMemory()
     {
-        /*for(int i = 0; i < 4; i++)
+        for(int i = 0; i < 4; i++)
         {
             if(memory[i] == professor)
             {
                 target = locations[i];
                 return true;
             }
-        }*/
+        }
         return false;
     }
 
@@ -189,7 +255,15 @@ public class Student : MonoBehaviour {
         }
         if (ray == 2)
         {
-            raycastOut();
+            if (!_idle)
+            {
+                raycastOut();
+            }
+            else
+            {
+                _idle = false;
+                assignProf(professor);
+            }
         }
     }
 

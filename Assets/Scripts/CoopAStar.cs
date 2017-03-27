@@ -40,6 +40,7 @@ public class CoopAStar : MonoBehaviour {
             GameObject student = Instantiate(studentObj);
             student.transform.position = new Vector3(x + 0.5f, y + 0.5f);
             student.name = "student" + i;
+            student.GetComponent<Student>().assignNumber(i);
         }
     }
 	
