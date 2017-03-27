@@ -7,7 +7,6 @@ public class CoopAStar : MonoBehaviour {
     BuildMap map;
     public int[,,] timeGrid; //0 - walkable, 1 - obstacle, 2 - agent
     public int planningWindow = 1;
-    int time = 0;
     GameObject studentObj;
     public int numberOfStudents = 1;
 
@@ -44,14 +43,6 @@ public class CoopAStar : MonoBehaviour {
         }
     }
 	
-	void incrementTime () {
-        time++;
-		if(time == planningWindow)
-        {
-            time = 0;
-        }
-	}
-
     public int isBlocked(int i, int j, int k)
     {
         return timeGrid[i, j, k];
