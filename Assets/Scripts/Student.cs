@@ -12,6 +12,11 @@ public class Student : MonoBehaviour {
     int[] memory;
     Vector3[] locations;
     bool _idle = false;
+    float _distance;
+    int moodCounter;
+    SpriteRenderer[] sprites;
+    int planningWindow;
+    int step;
 
     CoopAStar CAS;
     BuildMap map;
@@ -31,11 +36,55 @@ public class Student : MonoBehaviour {
         plaquesVisited = new List<int>();
         locations = new Vector3[4];
         CAS = GameObject.FindGameObjectWithTag("floor").GetComponent<CoopAStar>();
+        planningWindow = CAS.planningWindow;
+        step = 0;
         map = GameObject.FindGameObjectWithTag("floor").GetComponent<BuildMap>();
         plaque = Random.Range(0, 6);
         assignProf(Random.Range(0, 6));
+        _distance = distance(transform.position, target);
+        moodCounter = 0;
+        sprites = new SpriteRenderer[3];
+        sprites[0] = transform.Find("smile").GetComponent<SpriteRenderer>(); // :)
+        sprites[1] = transform.Find("wow").GetComponent<SpriteRenderer>(); // :O
+        sprites[2] = transform.Find("angery").GetComponent<SpriteRenderer>(); // >:(
+        sprites[0].enabled = true;
+        sprites[1].enabled = false;
+        sprites[2].enabled = false;
+        InvokeRepeating("mood", 0, 0.1f);
+    }
 
-	}
+    void mood()
+    {
+        float d = distance(transform.position, target);
+        if (d >= _distance && d != 0)
+        {
+            if (moodCounter >= 29)
+            {
+                sprites[0].enabled = false;
+                sprites[1].enabled = false;
+                sprites[2].enabled = true;
+                //gameObject.GetComponent<Renderer>().material.color = Color.red;
+            }
+            else
+            {
+                sprites[0].enabled = false;
+                sprites[1].enabled = true;
+                sprites[2].enabled = false;
+                //gameObject.GetComponent<Renderer>().material.color = Color.yellow;
+            }
+                
+            moodCounter++;
+        }
+        else
+        {
+            sprites[0].enabled = true;
+            sprites[1].enabled = false;
+            sprites[2].enabled = false;
+            //gameObject.GetComponent<Renderer>().material.color = Color.blue;
+            moodCounter = 0;
+        }
+        _distance = d;
+    }
 
     string memToString()
     {
@@ -228,7 +277,7 @@ public class Student : MonoBehaviour {
         }
         path.Reverse();
 
-        float i = 3/21;
+        float i = 0.1f;
         int j = 1;
         foreach (Node n in path)
         {
@@ -240,9 +289,25 @@ public class Student : MonoBehaviour {
                 StartCoroutine(moveTo(0, n.loc + new Vector3(0.5f, 0.5f), i));
             }
             j++;
-            i = i + 3/21f;
-            //Debug.Log("path step " + n.loc.x + " " + n.loc.y);
+            i = i + 0.1f;
         }
+
+        /* WHAT IT SHOULD BE
+
+        repeat until target reached
+            send request to move to loc to CAS (check collisions in CAS)
+            wait for goahead from CAS (CAS gives goahead every 0.1 seconds (increments step for all students, if = 0 force reevaluate path))
+
+            move
+
+        if target reached
+            book current spot for 5 steps
+            if planning window < 5
+                book current spot for as many steps as possible
+                rebook once planning window closes
+        
+
+        */
     }
 
     IEnumerator moveTo(int ray, Vector3 pos, float delay)
@@ -408,19 +473,30 @@ public class Student : MonoBehaviour {
                         add neighbour to OPEN
             */
             foreach (Node n in neighbours){
-                if (CAS.isBlocked((int)n.loc.x, (int)n.loc.y, 0) != 0 || CLOSED.Contains(n))
+                if (CAS.isBlocked((int)n.loc.x, (int)n.loc.y, step) != 0 || CLOSED.Contains(n))
                     continue;
 
+                //node is clear for planning
                 float newNeighbourCost = current.G + distance(current.loc, n.loc);
                 if (OPEN.Contains(n) == false || newNeighbourCost < distance(n.loc, currentLoc))
                 {
+                    //try to reserve space
+                    //if(!CAS.reserveSpace((int)n.loc.x, (int)n.loc.y, step))
+                        //continue;
+
                     n.G = newNeighbourCost;
                     n.H = distance(n.loc, targetLoc);
                     n.F = n.G + n.H;
                     n.parent = current;
-
+                    
                     if (!OPEN.Contains(n))
                         OPEN.Add(n);
+
+                    //step++;
+                    if (step == planningWindow)
+                    {
+                        step = 0;
+                    }
                 }
             }
         }

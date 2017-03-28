@@ -48,4 +48,9 @@ public class CoopAStar : MonoBehaviour {
     {
         return timeGrid[i, j, k];
     }
+
+    public bool reserveSpace(int i, int j, int k)
+    {
+        return false;
+    }
 }
