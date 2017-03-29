@@ -4,6 +4,13 @@ using UnityEngine;
 
 public class Student : MonoBehaviour {
 
+    /*
+    COLLISION PLAN:
+
+    make current space + space in front "blocked"
+        if path not available, get as close as possible then wait?
+    */
+
     int studentNumber;
     Vector3 target;
     int professor;
@@ -16,18 +23,17 @@ public class Student : MonoBehaviour {
     int moodCounter;
     SpriteRenderer[] sprites;
     int planningWindow;
-    int step;
+    bool moving = false;
+    public List<Node> path;
+    int aStarLimit = 200;
 
     CoopAStar CAS;
     BuildMap map;
 
-    public void assignNumber(int x)
+    // Use this for initialization
+    void Start()
     {
-        studentNumber = x;
-    }
-
-	// Use this for initialization
-	void Start () {
+        //Debug.Break();
         memory = new int[4];
         for (int i = 0; i < memory.Length; i++)
         {
@@ -36,11 +42,10 @@ public class Student : MonoBehaviour {
         plaquesVisited = new List<int>();
         locations = new Vector3[4];
         CAS = GameObject.FindGameObjectWithTag("floor").GetComponent<CoopAStar>();
-        planningWindow = CAS.planningWindow;
-        step = 0;
+        planningWindow = CAS.getPW();
         map = GameObject.FindGameObjectWithTag("floor").GetComponent<BuildMap>();
         plaque = Random.Range(0, 6);
-        assignProf(Random.Range(0, 6));
+
         _distance = distance(transform.position, target);
         moodCounter = 0;
         sprites = new SpriteRenderer[3];
@@ -51,6 +56,54 @@ public class Student : MonoBehaviour {
         sprites[1].enabled = false;
         sprites[2].enabled = false;
         InvokeRepeating("mood", 0, 0.1f);
+        assignProf(Random.Range(0, 6));
+    }
+
+    public void assignNumber(int x)
+    {
+        studentNumber = x;
+    }
+    
+    /*public void forcePathfind()
+    {
+        moving = false;
+        headToTarget();
+    }*/
+
+    public void incrementStep()
+    {
+        if (moving)
+        {
+            if (path.Count != 0)
+            {
+                /*CAS.timeGrid[(int)transform.position.x, (int)transform.position.y, 0] = 0;
+                if (CAS.reserveSpace((int)path[0].loc.x, (int)path[0].loc.y, 0))// && !CAS.reserveSpace((int)path[1].loc.x, (int)path[1].loc.x, 0))
+                {
+                    
+                }*/
+                transform.position = path[0].loc + new Vector3(0.5f, 0.5f);
+                path.RemoveAt(0);
+                if (path.Count == 0)
+                {
+                    moving = false;
+                    StartCoroutine(handleTargetReach());
+                }
+            }
+        }
+    }
+
+    IEnumerator handleTargetReach()
+    {
+        yield return new WaitForSeconds(0.5f);
+        if (!_idle)
+        {
+            raycastOut();
+        }
+        else
+        {
+            _idle = false;
+            assignProf(professor);
+        }
     }
 
     void mood()
@@ -65,14 +118,14 @@ public class Student : MonoBehaviour {
                 sprites[2].enabled = true;
                 //gameObject.GetComponent<Renderer>().material.color = Color.red;
             }
-            else
+            else if (moodCounter >= 1)
             {
                 sprites[0].enabled = false;
                 sprites[1].enabled = true;
                 sprites[2].enabled = false;
                 //gameObject.GetComponent<Renderer>().material.color = Color.yellow;
             }
-                
+            
             moodCounter++;
         }
         else
@@ -98,7 +151,7 @@ public class Student : MonoBehaviour {
 	
     void assignProf(int prof)
     {
-        Debug.Log("I am student " + studentNumber + ". I am looking for professor " + prof + ". My memory is " + memToString() + ". My target is " + targToString());
+        
         professor = prof;
         if (checkMemory())
         {
@@ -151,7 +204,6 @@ public class Student : MonoBehaviour {
     }
 
 	void raycastOut () {
-        //Debug.Log("ray out");
         RaycastHit hit;
         Ray left = new Ray(transform.position, Vector3.left);
         Ray right = new Ray(transform.position, Vector3.right);
@@ -201,7 +253,6 @@ public class Student : MonoBehaviour {
             if(x == 1)
             {
                 idle();
-                return;
             }
             else
             {
@@ -261,13 +312,14 @@ public class Student : MonoBehaviour {
     }
 
     void headToTarget()
-    {   
+    {
+        //CAS.pause();
         findPathTo(target);
     }
 
-    void traversePath(Node start, Node end)
+    void buildPath(Node start, Node end)
     {
-        List<Node> path = new List<Node>();
+        path = new List<Node>();
         Node currentNode = end;
 
         while(currentNode != start)
@@ -276,7 +328,9 @@ public class Student : MonoBehaviour {
             currentNode = currentNode.parent;
         }
         path.Reverse();
-
+        //Debug.Log("I am student " + studentNumber + ". I am looking for professor " + professor + ". My memory is " + memToString() + " My target is " + targToString() + ". My path length is " + path.Count + " It is " + _idle + " that I am idling.");
+        moving = true;
+        /*
         float i = 0.1f;
         int j = 1;
         foreach (Node n in path)
@@ -291,25 +345,10 @@ public class Student : MonoBehaviour {
             j++;
             i = i + 0.1f;
         }
-
-        /* WHAT IT SHOULD BE
-
-        repeat until target reached
-            send request to move to loc to CAS (check collisions in CAS)
-            wait for goahead from CAS (CAS gives goahead every 0.1 seconds (increments step for all students, if = 0 force reevaluate path))
-
-            move
-
-        if target reached
-            book current spot for 5 steps
-            if planning window < 5
-                book current spot for as many steps as possible
-                rebook once planning window closes
-        
-
         */
     }
 
+    /*
     IEnumerator moveTo(int ray, Vector3 pos, float delay)
     {
         yield return new WaitForSeconds(delay);
@@ -331,6 +370,7 @@ public class Student : MonoBehaviour {
             }
         }
     }
+    */
 
     void findPathTo(Vector3 position) //A*, consulting CAS to find out if any space blocked at a certain point in time
     {
@@ -361,6 +401,8 @@ public class Student : MonoBehaviour {
             if current is target node
                 return
         */
+        //int counter = 0;
+        //int k = 0;
         while (true)
         {
             float lowestF = Mathf.Infinity;
@@ -376,9 +418,9 @@ public class Student : MonoBehaviour {
             OPEN.Remove(current);
             CLOSED.Add(current);
 
-            if (current.loc == targetLoc)
+            if (current.loc == targetLoc) //|| counter > aStarLimit)
             {
-                traversePath(start, current);
+                buildPath(start, current);
                 break;
             }
 
@@ -473,7 +515,18 @@ public class Student : MonoBehaviour {
                         add neighbour to OPEN
             */
             foreach (Node n in neighbours){
-                if (CAS.isBlocked((int)n.loc.x, (int)n.loc.y, step) != 0 || CLOSED.Contains(n))
+
+                /*if (k == planningWindow - CAS.step)
+                {
+                    buildPath(start, current);
+                    break;
+                }
+                
+                if (CAS.isBlocked((int)n.loc.x, (int)n.loc.y, CAS.step + k) != 0 || CLOSED.Contains(n))
+                    continue;
+                */
+
+                if (CAS.isBlocked((int)n.loc.x, (int)n.loc.y, 0) != 0 || CLOSED.Contains(n))
                     continue;
 
                 //node is clear for planning
@@ -481,25 +534,31 @@ public class Student : MonoBehaviour {
                 if (OPEN.Contains(n) == false || newNeighbourCost < distance(n.loc, currentLoc))
                 {
                     //try to reserve space
-                    //if(!CAS.reserveSpace((int)n.loc.x, (int)n.loc.y, step))
+                    //if(!CAS.reserveSpace((int)n.loc.x, (int)n.loc.y, CAS.step + k))
+                        //continue;
+
+                    //if (!CAS.reserveSpace((int)n.loc.x, (int)n.loc.y, 0))
                         //continue;
 
                     n.G = newNeighbourCost;
                     n.H = distance(n.loc, targetLoc);
                     n.F = n.G + n.H;
                     n.parent = current;
+                    //k++;
                     
                     if (!OPEN.Contains(n))
                         OPEN.Add(n);
 
-                    //step++;
-                    if (step == planningWindow)
+                    /*if (k == planningWindow - CAS.step)
                     {
-                        step = 0;
-                    }
+                        buildPath(start, current);
+                        break;
+                    }*/
                 }
             }
+            //counter++;
         }
+        //CAS.unpause();
     }
 
     public static float distance(Vector3 a, Vector3 b)
